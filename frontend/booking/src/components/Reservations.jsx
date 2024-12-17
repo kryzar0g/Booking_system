@@ -23,7 +23,7 @@ const Reservations = () => {
       <ul>
         {reservations.map((reservation) => (
           <li key={reservation.id}>
-            User {reservation.userId} booked Room {reservation.roomId} for Week {reservation.weekId}.
+            User {reservation.userName} booked Room {reservation.roomId} for Week {reservation.weekId}.
           </li>
         ))}
       </ul>

@@ -6,14 +6,27 @@ const bodyParser = require('body-parser');
 const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
 app.use(cors());
+const mysql = require('mysql');
 
+var connection = mysql.createConnection({
+  host     : 'a055um.forpsi.com',
+  user     : 'f172348',
+  password : 'PrgNPr23',
+  database : 'f172348'
+});
 
 app.use(bodyParser.json());
 
-// In-memory database (replace with real DB in production)
 const users = [];
 const reservations = [];
 const rooms = [{ id: 1, name: 'Spravcovna' }, { id: 2, name: 'Dilna' }, { id: 3, name: 'Spodni mistnost' }, { id: 4, name: 'Naproti spravcovne' }, { id: 5, name: 'Zahrada' }];
+const timeslots = [
+  { id: 1, start: '16:00', end: '18:00' },
+  { id: 2, start: '17:00', end: '19:00' },
+  { id: 3, start: '18:00', end: '20:00' },
+  { id: 4, start: '19:00', end: '21:00' },
+  
+];
 
 // Register a user
 app.post('/register', (req, res) => {
@@ -43,34 +56,48 @@ app.get('/weeks', (req, res) => {
     });
   }
 
-  res.send(weeks);
+  res.json(weeks); // Ensure the response is in JSON format
+});
+
+// Get available rooms
+app.get('/rooms', (req, res) => {
+  res.json(rooms); // Ensure the response is in JSON format
+});
+
+// Get available timeslots
+app.get('/timeslots', (req, res) => {
+  res.json(timeslots); // Ensure the response is in JSON format
 });
 
 // Book a room
 app.post('/book', (req, res) => {
-  const { userId, weekId, roomId } = req.body;
+  const { userName, weekId, roomId, timeslotId } = req.body;
+  console.log('Received booking request:', { userName, weekId, roomId, timeslotId });
 
-  if (!userId || !weekId || !roomId) {
-    return res.status(400).send({ error: 'userId, weekId, and roomId are required' });
+  if (!userName || !weekId || !roomId || !timeslotId) {
+    return res.status(400).send({ error: 'userName, weekId, roomId, and timeslotId are required' });
   }
 
-  const user = users.find(u => u.id === userId);
+  const user = users.find(u => u.name === userName);
   if (!user) return res.status(404).send({ error: 'User not found' });
 
   const room = rooms.find(r => r.id === roomId);
   if (!room) return res.status(404).send({ error: 'Room not found' });
 
-  const existingReservation = reservations.find(r => r.weekId === weekId && r.roomId === roomId);
+  const timeslot = timeslots.find(t => t.id === timeslotId);
+  if (!timeslot) return res.status(404).send({ error: 'Timeslot not found' });
+
+  const existingReservation = reservations.find(r => r.weekId === weekId && r.roomId === roomId && r.timeslotId === timeslotId);
   if (existingReservation) {
-    return res.status(400).send({ error: 'Room is already booked for this week' });
+    return res.status(400).send({ error: 'Room is already booked for this timeslot' });
   }
 
-  const userBookingsThisWeek = reservations.filter(r => r.userId === userId && r.weekId === weekId);
+  const userBookingsThisWeek = reservations.filter(r => r.userName === userName && r.weekId === weekId);
   if (userBookingsThisWeek.length > 0) {
     return res.status(400).send({ error: 'User has already booked a room this week' });
   }
 
-  const reservation = { id: uuidv4(), userId, weekId, roomId };
+  const reservation = { id: uuidv4(), userName, weekId, roomId, timeslotId };
   reservations.push(reservation);
   user.bookings += 1;
   res.status(201).send(reservation);
